@@ -1,0 +1,6 @@
+[submodule "libs/portaudio"]
+	path = libs/portaudio
+	url = git@github.com:PortAudio/portaudio.git
+[submodule "libs/http-server"]
+	path = libs/http-server
+	url = https://github.com/timholzhey/http-server.git
