@@ -84,72 +84,61 @@
         loadParams();
 
         // Visualization
-        const viz_stream = new WebSocket(`ws://${window.location.host}/api/viz_stream`);
-        viz_stream.binaryType = "arraybuffer";
-        viz_stream.onopen = function(event) {
-            const start = new TextEncoder().encode("start");
-            viz_stream.send(start);
-        };
-        viz_stream.onmessage = function(event) {
-            if (event.data instanceof ArrayBuffer) {
-                const samples = new Int32Array(event.data);
-                let max = 0;
-                for (let i = 0; i < samples.length; i++) {
-                    const sample = samples[i] / 32768;
-                    samples[i] = sample;
-                    if (Math.abs(sample) > max) {
-                        max = Math.abs(sample);
+        fetch(`http://${window.location.host}/api/viz_stream`)
+            .then(async (response) => {
+                const reader = response.body.getReader();
+                for await (const chunk of readChunks(reader)) {
+                    const samples = new Int32Array(chunk.buffer);
+                    let max = 0;
+                    for (let i = 0; i < samples.length; i++) {
+                        const sample = samples[i] / 32768;
+                        samples[i] = sample;
+                        if (Math.abs(sample) > max) {
+                            max = Math.abs(sample);
+                        }
                     }
+                    const canvas = document.getElementById("viz");
+                    const ctx = canvas.getContext("2d");
+                    const width = canvas.width;
+                    const height = canvas.height;
+                    const xStep = width / samples.length;
+                    const yStep = height / 2 / max;
+                    ctx.clearRect(0, 0, width, height);
+                    ctx.beginPath();
+                    ctx.moveTo(0, height / 2);
+                    for (let i = 0; i < samples.length; i++) {
+                        ctx.lineTo(i * xStep, height / 2 + samples[i] * yStep);
+                    }
+                    ctx.stroke();
                 }
-                const canvas = document.getElementById("viz");
-                const ctx = canvas.getContext("2d");
-                const width = canvas.width;
-                const height = canvas.height;
-                const xStep = width / samples.length;
-                // normalize max to height/2
-                const yStep = height / 2 / max;
-                ctx.clearRect(0, 0, width, height);
-                ctx.beginPath();
-                ctx.moveTo(0, height / 2);
-                for (let i = 0; i < samples.length; i++) {
-                    ctx.lineTo(i * xStep, height / 2 + samples[i] * yStep);
-                }
-                ctx.stroke();
-            }
-        };
+            })
+
+        function readChunks(reader) {
+            return {
+                async* [Symbol.asyncIterator]() {
+                    let readResult = await reader.read();
+                    while (!readResult.done) {
+                        yield readResult.value;
+                        readResult = await reader.read();
+                    }
+                },
+            };
+        }
 
         // Toggle voice
         const toggle_voice = document.getElementById("toggle-voice");
         is_voice_on = false;
+        // websocket on /api/midi, send note on note off midi messages as binary data, 3 bytes
+        const ws_midi = new WebSocket(`ws://${window.location.host}/api/midi`);
         toggle_voice.onclick = function(event) {
             event.preventDefault();
-            const body = JSON.stringify({type: "voice_message", event: is_voice_on ? "note_off" : "note_on", channel: 0, key: 60, velocity: 127});
-            fetch(`http://${window.location.host}/api/midi_message`, {
-                method: "POST",
-                body: body
-            });
+            if (is_voice_on) {
+                ws_midi.send(new Uint8Array([0x80, 0x3c, 0x40]));
+            } else {
+                ws_midi.send(new Uint8Array([0x90, 0x3c, 0x40]));
+            }
             is_voice_on = !is_voice_on;
         };
-
-        // MIDI with keyboard controls
-        // window.onload = function() {
-        //     window.addEventListener("keydown", function(event) {
-        //         const key = event.keyCode;
-        //         const body = JSON.stringify({type: "voice_message", event: "note_on", channel: 0, key: key, velocity: 127});
-        //         fetch(`http://${window.location.host}/api/midi_message`, {
-        //             method: "POST",
-        //             body: body
-        //         });
-        //     });
-        //     window.addEventListener("keyup", function(event) {
-        //         const key = event.keyCode;
-        //         const body = JSON.stringify({type: "voice_message", event: "note_off", channel: 0, key: key, velocity: 127});
-        //         fetch(`http://${window.location.host}/api/midi_message`, {
-        //             method: "POST",
-        //             body: body
-        //         });
-        //     });
-        // }
     </script>
 </body>
 </html>

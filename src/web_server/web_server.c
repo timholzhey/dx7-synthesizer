@@ -14,7 +14,7 @@
 
 HTTP_SERVER(server);
 
-HTTP_ROUTE_METHOD(get_roms, HTTP_METHOD_GET, {
+HTTP_ROUTE_METHOD("/api/get_roms", get_roms, HTTP_METHOD_GET) {
 	json_object_t json_object = {0};
 	const char **rom_names = (const char **) patch_file_get_rom_names();
 
@@ -52,9 +52,9 @@ HTTP_ROUTE_METHOD(get_roms, HTTP_METHOD_GET, {
 
 	free(json_string);
 	json_object_free(&json_object);
-});
+}
 
-HTTP_ROUTE_METHOD(select_rom, HTTP_METHOD_POST, {
+HTTP_ROUTE_METHOD("api/select_roms", select_rom, HTTP_METHOD_POST) {
 	const char *body = request.body();
 
 	json_object_t json_object;
@@ -80,9 +80,9 @@ HTTP_ROUTE_METHOD(select_rom, HTTP_METHOD_POST, {
 	}
 
 	json_object_free(&json_object);
-});
+}
 
-HTTP_ROUTE_METHOD(get_patches, HTTP_METHOD_GET, {
+HTTP_ROUTE_METHOD("api/get_patches", get_patches, HTTP_METHOD_GET) {
 	if (!patch_file_is_loaded()) {
 		response.text("No ROM loaded");
 		response.status(HTTP_STATUS_CODE_BAD_REQUEST);
@@ -131,9 +131,9 @@ HTTP_ROUTE_METHOD(get_patches, HTTP_METHOD_GET, {
 
 	free(json_string);
 	json_object_free(&json_object);
-});
+}
 
-HTTP_ROUTE_METHOD(select_patch, HTTP_METHOD_POST, {
+HTTP_ROUTE_METHOD("api/select_patch", select_patch, HTTP_METHOD_POST) {
 	const char *body = request.body();
 
 	json_object_t json_object;
@@ -159,9 +159,9 @@ HTTP_ROUTE_METHOD(select_patch, HTTP_METHOD_POST, {
 	}
 
 	json_object_free(&json_object);
-});
+}
 
-HTTP_ROUTE_METHOD(get_params, HTTP_METHOD_GET, {
+HTTP_ROUTE_METHOD("api/get_params", get_params, HTTP_METHOD_GET) {
 	voice_params_t *p_params = &synth_data.voice_params;
 
 	uint32_t string_length = 10*1024;
@@ -169,7 +169,7 @@ HTTP_ROUTE_METHOD(get_params, HTTP_METHOD_GET, {
 	uint32_t index = 0;
 	index += snprintf(json_string + index, string_length - index, "{\"params\":{");
 	index += snprintf(json_string + index, string_length - index, "\"operators\":[");
-	for (uint8_t i = 0; i < NUM_OPERATORS_PER_VOICE; i++) {
+	for (uint8_t i = 0; i < NUM_OPERATORS; i++) {
 		index += snprintf(json_string + index, string_length - index,
 						  "{\"env\":{\"rate1\":%u,\"level1\":%u,\"rate2\":%u,\"level2\":%u,\"rate3\":%u,\"level3\":%u,\"rate4\":%u,\"level4\":%u},"
 						  "\"kls\":{\"break_point\":%u,\"left_depth\":%u,\"right_depth\":%u,\"left_curve\":%u,\"right_curve\":%u},"
@@ -182,7 +182,7 @@ HTTP_ROUTE_METHOD(get_params, HTTP_METHOD_GET, {
 		p_params->operators[i].osc.frequency_coarse, p_params->operators[i].osc.frequency_fine, p_params->operators[i].osc.detune,
 		p_params->operators[i].keyboard_rate_scaling, p_params->operators[i].amplitude_modulation_sensitivity,
 		p_params->operators[i].key_velocity_sensitivity, p_params->operators[i].output_level);
-		if (i < NUM_OPERATORS_PER_VOICE - 1) {
+		if (i < NUM_OPERATORS - 1) {
 			index += snprintf(json_string + index, string_length - index, ",");
 		}
 	}
@@ -201,95 +201,70 @@ HTTP_ROUTE_METHOD(get_params, HTTP_METHOD_GET, {
 	response.json(json_string);
 	
 	free(json_string);
-});
+}
 
-HTTP_ROUTE_METHOD(midi_message, HTTP_METHOD_POST, {
-	const char *body = request.body();
+WEBSOCKET_ROUTE("api/midi", midi) {
+	switch (websocket.event) {
+		case WEBSOCKET_EVENT_DATA:
+			if (websocket.data_length != 3) {
+				log_error("Invalid MIDI message length: %u", websocket.data_length);
+				return;
+			}
+			uint8_t status = websocket.data[0] & 0xF0;
+			uint8_t channel = websocket.data[0] & 0x0F;
+			uint8_t data1 = websocket.data[1];
+			uint8_t data2 = websocket.data[2];
 
-	json_object_t json_object;
-	if (json_parse(body, strlen(body), &json_object) != RET_CODE_OK) {
-		response.text("Invalid JSON");
-		response.status(HTTP_STATUS_CODE_BAD_REQUEST);
-		return;
+			// Reject not note on/off messages
+			if (status != 0x80 && status != 0x90) {
+				log_error("Unhandled MIDI message: %02X", status);
+				return;
+			}
+
+			if (status == 0x80) {
+				// Note off
+				voice_release_key(data1, data2);
+			} else {
+				// Note on
+				voice_assign_key(data1, data2);
+			}
+			break;
+		default:
+			break;
 	}
+}
 
-	json_object_member_t *p_type = json_object_get_member(&json_object, "type");
-	if (p_type == NULL || p_type->type != JSON_VALUE_TYPE_STRING) {
-		response.text("Invalid JSON");
-		response.status(HTTP_STATUS_CODE_BAD_REQUEST);
-		json_object_free(&json_object);
-		return;
+HTTP_ROUTE_METHOD("/api/viz_stream", visualization_stream, HTTP_METHOD_GET) {
+	uint8_t *p_transfer_buffer = NULL;
+	uint32_t transfer_buffer_size = 0;
+	if (visualization_consume_transfer(&p_transfer_buffer, &transfer_buffer_size) == RET_CODE_OK) {
+		char chunk_size[16];
+		sprintf(chunk_size, "%x\r\n", transfer_buffer_size);
+
+		response.append((uint8_t *) chunk_size, strlen(chunk_size));
+		response.append((uint8_t *) p_transfer_buffer, transfer_buffer_size);
+		response.append((uint8_t *) "\r\n", 2);
+
+		http_headers_set_value_string(response.p_headers, response.p_num_headers, "Transfer-Encoding", "chunked");
+		http_headers_set_value_string(response.p_headers, response.p_num_headers, "Content-Type", "application/octet-stream");
+		http_headers_unset(response.p_headers, response.p_num_headers, "Content-Length");
+		response.send();
 	}
-
-	json_object_member_t *p_event = json_object_get_member(&json_object, "event");
-	if (p_event == NULL || p_event->type != JSON_VALUE_TYPE_STRING) {
-		response.text("Invalid JSON");
-		response.status(HTTP_STATUS_CODE_BAD_REQUEST);
-		json_object_free(&json_object);
-		return;
-	}
-
-	json_object_member_t *p_channel = json_object_get_member(&json_object, "channel");
-	if (p_channel == NULL || p_channel->type != JSON_VALUE_TYPE_NUMBER) {
-		response.text("Invalid JSON");
-		response.status(HTTP_STATUS_CODE_BAD_REQUEST);
-		json_object_free(&json_object);
-		return;
-	}
-
-	json_object_member_t *p_key = json_object_get_member(&json_object, "key");
-	if (p_key == NULL || p_key->type != JSON_VALUE_TYPE_NUMBER) {
-		response.text("Invalid JSON");
-		response.status(HTTP_STATUS_CODE_BAD_REQUEST);
-		json_object_free(&json_object);
-		return;
-	}
-
-	json_object_member_t *p_velocity = json_object_get_member(&json_object, "velocity");
-	if (p_velocity == NULL || p_velocity->type != JSON_VALUE_TYPE_NUMBER) {
-		response.text("Invalid JSON");
-		response.status(HTTP_STATUS_CODE_BAD_REQUEST);
-		json_object_free(&json_object);
-		return;
-	}
-
-	uint8_t channel = p_channel->value.number;
-	uint8_t key = p_key->value.number;
-	uint8_t velocity = p_velocity->value.number;
-
-	if (strcmp(p_type->value.string, "voice_message") == 0) {
-		if (strcmp(p_event->value.string, "note_on") == 0) {
-			voice_assign_key(key, velocity);
-		} else if (strcmp(p_event->value.string, "note_off") == 0) {
-			voice_release_key(key, velocity);
-		} else {
-			response.text("Unhandled event");
-			response.status(HTTP_STATUS_CODE_BAD_REQUEST);
-			json_object_free(&json_object);
-			return;
-		}
-	} else {
-		response.text("Unhandled type");
-		response.status(HTTP_STATUS_CODE_BAD_REQUEST);
-		json_object_free(&json_object);
-		return;
-	}
-
-	json_object_free(&json_object);
-});
+}
 
 ret_code_t web_server_start(void) {
-	// Route
-	server.websocket_streaming("api/viz_stream", visualization_route_websocket_stream);
-	server.route("api/get_roms", get_roms);
-	server.route("api/select_rom", select_rom);
-	server.route("api/get_patches", get_patches);
-	server.route("api/select_patch", select_patch);
-	server.route("api/get_params", get_params);
-	server.route("api/midi_message", midi_message);
+	visualization_stream.streaming = true;
+	http_route_t routes[] = {
+			get_roms,
+			select_rom,
+			get_patches,
+			select_patch,
+			get_params,
+			midi,
+			visualization_stream
+	};
+	server.routes(routes, sizeof(routes) / sizeof(http_route_t));
 	server.serve_static("static");
-
-	// Start
 	server.run();
 
 	return RET_CODE_OK;

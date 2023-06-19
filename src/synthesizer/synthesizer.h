@@ -10,7 +10,7 @@
 #include "patch_file.h"
 
 #define NUM_VOICES					16
-#define NUM_OPERATORS_PER_VOICE		6
+#define NUM_OPERATORS				6
 
 typedef struct {
 	int32_t phase;
@@ -22,7 +22,7 @@ typedef struct {
 typedef struct {
 	uint8_t gate:1;
 	uint8_t note;
-	operator_data_t operator_data[NUM_OPERATORS_PER_VOICE];
+	operator_data_t operator_data[NUM_OPERATORS];
 } voice_data_t;
 
 typedef struct {

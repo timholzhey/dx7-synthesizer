@@ -86,7 +86,7 @@ static const uint16_t sin_exp_table[SIN_TABLE_SIZE] = {
 		854, 859, 864, 869, 874, 880, 885, 890, 895, 900, 906, 911, 916, 921, 927, 932,
 		937, 942, 948, 953, 959, 964, 969, 975, 980, 986, 991, 996, 1002, 1007, 1013, 1018
 };
-static const uint8_t algorithm_routing_table[ALGORITHM_ROUTING_TABLE_SIZE][NUM_OPERATORS_PER_VOICE] = {
+static const uint8_t algorithm_routing_table[ALGORITHM_ROUTING_TABLE_SIZE][NUM_OPERATORS] = {
 		{OUTPUT_MOD_INDEX_MASTER, OUTPUT_MODE_INDEX_1, OUTPUT_MOD_INDEX_MASTER, OUTPUT_MODE_INDEX_3, OUTPUT_MODE_INDEX_4, OUTPUT_MODE_INDEX_5 | OUTPUT_MODE_INDEX_6},
 		{OUTPUT_MOD_INDEX_MASTER, OUTPUT_MODE_INDEX_1 | OUTPUT_MODE_INDEX_2, OUTPUT_MOD_INDEX_MASTER, OUTPUT_MODE_INDEX_3, OUTPUT_MODE_INDEX_4, OUTPUT_MODE_INDEX_5},
 		{OUTPUT_MOD_INDEX_MASTER, OUTPUT_MODE_INDEX_1, OUTPUT_MODE_INDEX_2, OUTPUT_MOD_INDEX_MASTER, OUTPUT_MODE_INDEX_4, OUTPUT_MODE_INDEX_5 | OUTPUT_MODE_INDEX_6},
@@ -120,17 +120,17 @@ ret_code_t synthesizer_init(void) {
 	RET_ON_FAIL(patch_file_load_patch(DEFAULT_PATCH_FILE_VOICE - 1, &synth_data.voice_params));
 
 	// Test 1 operator
-//	voice_params_t params = {
-//			.algorithm = 1,
-//			.name = "TEST      ",
-//			.operators = {
-//					[0] = {
-//						.osc = {.frequency_coarse = 1},
-//						.output_level = 99,
-//					}
-//			}
-//	};
-//	memcpy(&synth_data.voice_params, &params, sizeof(voice_params_t));
+	voice_params_t params = {
+			.algorithm = 1,
+			.name = "TEST      ",
+			.operators = {
+					[0] = {
+						.osc = {.frequency_coarse = 1},
+						.output_level = 99,
+					}
+			}
+	};
+	memcpy(&synth_data.voice_params, &params, sizeof(voice_params_t));
 //	voice_assign_key(60, 127);
 
 	return RET_CODE_OK;
@@ -222,14 +222,14 @@ int synthesizer_render(const void *input_buffer, void *output_buffer,
 			}
 
 			// Clear input buffers
-			for (uint32_t k = 0; k < NUM_OPERATORS_PER_VOICE; k++) {
+			for (uint32_t k = 0; k < NUM_OPERATORS; k++) {
 				operator_data_t *op_data = &data->voice_data[voice_idx].operator_data[k];
 				op_data->input_mod_buffer = 0;
 				op_data->level_in = 0;
 			}
 
 			// Sample operators
-			for (uint32_t operator_idx = NUM_OPERATORS_PER_VOICE - 1; operator_idx < NUM_OPERATORS_PER_VOICE; operator_idx--) {
+			for (uint32_t operator_idx = NUM_OPERATORS - 1; operator_idx < NUM_OPERATORS; operator_idx--) {
 				operator_data_t *op_data = &data->voice_data[voice_idx].operator_data[operator_idx];
 				operator_params_t *op_params = &data->voice_params.operators[operator_idx];
 
@@ -252,7 +252,7 @@ int synthesizer_render(const void *input_buffer, void *output_buffer,
 				if (routing[operator_idx] & OUTPUT_MOD_INDEX_MASTER) {
 					master_buffer += sample;
 				}
-				for (uint8_t output_index = 0; output_index < NUM_OPERATORS_PER_VOICE; output_index++) {
+				for (uint8_t output_index = 0; output_index < NUM_OPERATORS; output_index++) {
 					if (routing[operator_idx] & (1 << output_index)) {
 						// printf("routing %d to %d\n", operator_idx, output_index);
 						data->voice_data[voice_idx].operator_data[output_index].input_mod_buffer += sample;
@@ -261,7 +261,7 @@ int synthesizer_render(const void *input_buffer, void *output_buffer,
 			}
 		}
 
-		// Add sample to visualization
+		// Add sample to visualization, align with midi frequency
 		visualization_add_sample(master_buffer, 0);
 
 		// Write mono to stereo output buffer

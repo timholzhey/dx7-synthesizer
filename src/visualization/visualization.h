@@ -8,8 +8,8 @@
 #include <stdint.h>
 #include "common.h"
 
-void visualization_route_websocket_stream(void);
-
 void visualization_add_sample(int32_t sample, uint32_t align_freq);
+
+ret_code_t visualization_consume_transfer(uint8_t **pp_buffer, uint32_t *p_buffer_size);
 
 #endif //FM_SYNTHESIZER_VISUALIZATION_H
