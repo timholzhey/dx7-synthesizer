@@ -187,7 +187,7 @@ ret_code_t yamaha_dx7_decode_voice_data(const uint8_t *p_data, uint32_t data_len
 		voice_params_t *p_voice = &p_voice_params[voice_idx];
 
 		for (uint8_t op_idx = 0; op_idx < 6; op_idx++) {
-			operator_params_t *p_op = &p_voice->operators[op_idx];
+			operator_params_t *p_op = &p_voice->operators[6 - op_idx - 1];
 
 			p_op->env.rate1 = p_data[data_idx++];
 			p_op->env.rate2 = p_data[data_idx++];

@@ -8,12 +8,10 @@
 #include "common.h"
 #include "portaudio.h"
 #include "patch_file.h"
-
-#define NUM_VOICES					16
-#define NUM_OPERATORS				6
+#include "config.h"
 
 typedef struct {
-	int32_t phase;
+	uint32_t phase;
 	int32_t input_mod_buffer;
 	int32_t level_in;
 	int32_t level_out;

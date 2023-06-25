@@ -8,7 +8,7 @@
 </head>
 <body>
     <h1>FM Synthesizer</h1>
-    <canvas id="viz" width="200" height="100"></canvas>
+    <canvas id="viz" width="200" height="50"></canvas>
     <div id="rom-selection">
         <select id="roms"></select>
         <button id="load-rom">Load ROM</button>
@@ -17,7 +17,6 @@
         <select id="patches"></select>
         <button id="load-patch">Load Patch</button>
     </div>
-    <button id="toggle-voice">Toggle Voice (Middle C)</button>
     <div id="voice-params" style="white-space: pre;"></div>
     <script>
         // Rom selection
@@ -88,6 +87,10 @@
             .then(async (response) => {
                 const reader = response.body.getReader();
                 for await (const chunk of readChunks(reader)) {
+                    if (chunk.buffer.byteLength % 4 !== 0) {
+                        console.log("Invalid chunk size");
+                        continue;
+                    }
                     const samples = new Int32Array(chunk.buffer);
                     let max = 0;
                     for (let i = 0; i < samples.length; i++) {
@@ -125,20 +128,74 @@
             };
         }
 
-        // Toggle voice
-        const toggle_voice = document.getElementById("toggle-voice");
-        is_voice_on = false;
-        // websocket on /api/midi, send note on note off midi messages as binary data, 3 bytes
+        // Play MIDI with keyboard
+        qwertyNotes = [];
+        qwertyNotes[16] = 41;
+        // = F2
+        qwertyNotes[65] = 42;
+        qwertyNotes[90] = 43;
+        qwertyNotes[83] = 44;
+        qwertyNotes[88] = 45;
+        qwertyNotes[68] = 46;
+        qwertyNotes[67] = 47;
+        qwertyNotes[86] = 48;
+        // = C3
+        qwertyNotes[71] = 49;
+        qwertyNotes[66] = 50;
+        qwertyNotes[72] = 51;
+        qwertyNotes[78] = 52;
+        qwertyNotes[77] = 53;
+        // = F3
+        qwertyNotes[75] = 54;
+        qwertyNotes[188] = 55;
+        qwertyNotes[76] = 56;
+        qwertyNotes[190] = 57;
+        qwertyNotes[186] = 58;
+        qwertyNotes[191] = 59;
+
+        // Upper row: q2w3er5t6y7u...
+        qwertyNotes[81] = 60;
+        // = C4 ("middle C")
+        qwertyNotes[50] = 61;
+        qwertyNotes[87] = 62;
+        qwertyNotes[51] = 63;
+        qwertyNotes[69] = 64;
+        qwertyNotes[82] = 65;
+        // = F4
+        qwertyNotes[53] = 66;
+        qwertyNotes[84] = 67;
+        qwertyNotes[54] = 68;
+        qwertyNotes[89] = 69;
+        qwertyNotes[55] = 70;
+        qwertyNotes[85] = 71;
+        qwertyNotes[73] = 72;
+        // = C5
+        qwertyNotes[57] = 73;
+        qwertyNotes[79] = 74;
+        qwertyNotes[48] = 75;
+        qwertyNotes[80] = 76;
+        qwertyNotes[219] = 77;
+        // = F5
+        qwertyNotes[187] = 78;
+        qwertyNotes[221] = 79;
+
         const ws_midi = new WebSocket(`ws://${window.location.host}/api/midi`);
-        toggle_voice.onclick = function(event) {
-            event.preventDefault();
-            if (is_voice_on) {
-                ws_midi.send(new Uint8Array([0x80, 0x3c, 0x40]));
-            } else {
-                ws_midi.send(new Uint8Array([0x90, 0x3c, 0x40]));
+        document.addEventListener("keydown", function(event) {
+            const note = qwertyNotes[event.keyCode];
+            console.log(event.keyCode, note);
+            if (note !== undefined) {
+                ws_midi.send(new Uint8Array([0x90, note, 0x40]));
             }
-            is_voice_on = !is_voice_on;
-        };
+        });
+        document.addEventListener("keyup", function(event) {
+            const note = qwertyNotes[event.keyCode];
+            if (note !== undefined) {
+                ws_midi.send(new Uint8Array([0x80, note, 0x40]));
+            }
+        });
+
+        // Init
+        fetch("/api/init", {method: "POST"});
     </script>
 </body>
 </html>

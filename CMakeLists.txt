@@ -14,6 +14,7 @@ add_executable(fm_synthesizer
         src/visualization/visualization.c
         src/audio_driver/audio_driver.c
         src/web_server/web_server.c
+        src/luts/read_luts.c
 
         ${HTTP_SERVER_DIR}/src/http/server/http_server.c
         ${HTTP_SERVER_DIR}/src/http/headers/http_headers.c
@@ -45,12 +46,17 @@ add_executable(fm_synthesizer
         ${HTTP_SERVER_DIR}/src/lib/base64/base64.c
 )
 
+add_executable(generate_luts
+        src/luts/generate_luts.c
+)
+
 include_directories(
         src
         src/synthesizer
         src/visualization
         src/audio_driver
         src/web_server
+        src/luts
 
         libs/portaudio/include
 
@@ -97,10 +103,28 @@ if (NOT PORTAUDIO_LIB)
     message(FATAL_ERROR "PortAudio library not found")
 endif()
 
-target_link_libraries(fm_synthesizer ${PORTAUDIO_LIB})
+target_link_libraries(fm_synthesizer ${PORTAUDIO_LIB} m)
+
+target_link_libraries(generate_luts m)
 
 add_definitions(
         -DSOURCE_DIR="${CMAKE_SOURCE_DIR}"
-        -DHTTP_SERVER_ROOT_DIR="${CMAKE_SOURCE_DIR}"
         -DDEBUG_GLOBAL=1
+        -DLOG_LEVEL_GLOBAL=1
+        -DLUT_GENERATE_DIR="${CMAKE_SOURCE_DIR}/res/luts"
+)
+
+target_compile_definitions(
+        fm_synthesizer
+        PUBLIC
+        -DHTTP_SERVER_ROOT_DIR="${CMAKE_SOURCE_DIR}"
+)
+
+add_dependencies(fm_synthesizer generate_luts)
+
+add_custom_command(
+        TARGET fm_synthesizer
+        PRE_BUILD
+        COMMAND generate_luts
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
 )

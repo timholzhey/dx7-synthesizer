@@ -8,7 +8,7 @@
 #include <stdint.h>
 #include "common.h"
 
-void visualization_add_sample(int32_t sample, uint32_t align_freq);
+void visualization_add_sample(int32_t sample, uint32_t align_note);
 
 ret_code_t visualization_consume_transfer(uint8_t **pp_buffer, uint32_t *p_buffer_size);
 

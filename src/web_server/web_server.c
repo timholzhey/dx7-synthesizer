@@ -252,6 +252,10 @@ HTTP_ROUTE_METHOD("/api/viz_stream", visualization_stream, HTTP_METHOD_GET) {
 	}
 }
 
+HTTP_ROUTE_METHOD("/api/init", init, HTTP_METHOD_POST) {
+	voice_init();
+}
+
 ret_code_t web_server_start(void) {
 	visualization_stream.streaming = true;
 	http_route_t routes[] = {
@@ -261,7 +265,8 @@ ret_code_t web_server_start(void) {
 			select_patch,
 			get_params,
 			midi,
-			visualization_stream
+			visualization_stream,
+			init
 	};
 	server.routes(routes, sizeof(routes) / sizeof(http_route_t));
 	server.serve_static("static");
