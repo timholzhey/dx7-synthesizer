@@ -20,6 +20,7 @@ typedef struct {
 typedef struct {
 	uint8_t gate:1;
 	uint8_t note;
+	int32_t feedback_buffer;
 	operator_data_t operator_data[NUM_OPERATORS];
 } voice_data_t;
 
