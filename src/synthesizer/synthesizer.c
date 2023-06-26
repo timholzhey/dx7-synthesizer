@@ -193,7 +193,7 @@ int synthesizer_render(const void *input_buffer, void *output_buffer,
 				op_data->input_mod_buffer = 0;
 				op_data->level_in = 0;
 				if (routing[operator_idx] & (1 << operator_idx)) {
-					op_data->input_mod_buffer = data->voice_data[voice_idx].feedback_buffer >> (FEEDBACK_BIT_WIDTH - data->voice_data[voice_idx].feedback_buffer);
+					op_data->input_mod_buffer = data->voice_data[voice_idx].feedback_buffer >> (FEEDBACK_BIT_WIDTH - data->voice_params.feedback + 1);
 				}
 			}
 
