@@ -13,13 +13,6 @@
 #include "config.h"
 #include "read_luts.h"
 
-#define ENVELOPE_BIT_WIDTH				9
-#define ENVELOPE_MAX					(1 << ENVELOPE_BIT_WIDTH)
-
-#define FEEDBACK_BIT_WIDTH				8
-
-#define INT16_SIGN_BIT					0x8000
-
 #define OSCILLATOR_MODE_RATIO			0
 #define OSCILLATOR_MODE_FIXED			1
 
@@ -42,8 +35,8 @@ ret_code_t synthesizer_init(void) {
 	RET_ON_FAIL(READ_LUT("hex_u16_exp.mem", exp_table));
 	RET_ON_FAIL(READ_LUT("hex_i32_coarse_log_mult.mem", coarse_log_mult_table));
 	RET_ON_FAIL(READ_LUT("hex_u32_fine_log_mult.mem", fine_log_mult_table));
-	RET_ON_FAIL(READ_LUT("hex_u8_algorithm_routing.mem", algorithm_routing_table));
 	RET_ON_FAIL(READ_LUT("hex_u8_level_scale.mem", level_scale_table));
+	RET_ON_FAIL(read_lut("hex_u8_algorithm_routing.mem", (uint8_t *) algorithm_routing_table, ALGORITHM_ROUTING_TABLE_SIZE * NUM_OPERATORS, 1));
 
 	// Load default patch file
 	RET_ON_FAIL(patch_file_load_rom(DEFAULT_PATCH_FILE));

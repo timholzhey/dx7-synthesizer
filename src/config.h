@@ -13,6 +13,13 @@
 #define NUM_VOICES								16
 #define NUM_OPERATORS							6
 
+#define ENVELOPE_BIT_WIDTH						9
+#define ENVELOPE_MAX							(1 << ENVELOPE_BIT_WIDTH)
+
+#define FEEDBACK_BIT_WIDTH						8
+
+#define INT16_SIGN_BIT							0x8000
+
 #define DEFAULT_PATCH_FILE						PATCH_FILE_ROM_ROM1A
 #define DEFAULT_PATCH_FILE_VOICE				11
 

@@ -14,7 +14,7 @@ static uint8_t buffer_8[BUFFER_SIZE];
 static uint16_t *buffer_16 = (uint16_t *) buffer_8;
 static uint32_t *buffer_32 = (uint32_t *) buffer_8;
 
-static void write_hex_bytes_to_file(uint8_t *p_data, uint32_t data_len, const char *filename) {
+static void write_hex_bytes_to_file(uint8_t *p_data, uint32_t num_elements, uint32_t element_size, const char *filename) {
 	// build file path
 	char file_path[256];
 	sprintf(file_path, "%s/%s", LUT_GENERATE_DIR, filename);
@@ -26,12 +26,26 @@ static void write_hex_bytes_to_file(uint8_t *p_data, uint32_t data_len, const ch
 	}
 
 	// write comment header
-	fprintf(file, "// %s [%u bytes]\n\n", filename, data_len);
+	fprintf(file, "// %s: %d elements [%d bytes each]\n\n", filename, num_elements, element_size);
 
 	// write data
-	for (uint32_t i = 0; i < data_len; i++) {
-		fprintf(file, "%02x", p_data[i]);
-		if (i % 16 == 15) {
+	uint32_t nun_bytes = num_elements * element_size;
+	for (uint32_t i = 0; i < nun_bytes; i += element_size) {
+		switch (element_size) {
+			case 1:
+				fprintf(file, "%02x", p_data[i]);
+				break;
+			case 2:
+				fprintf(file, "%02x%02x", p_data[i + 1], p_data[i]);
+				break;
+			case 4:
+				fprintf(file, "%02x%02x%02x%02x", p_data[i + 3], p_data[i + 2], p_data[i + 1], p_data[i]);
+				break;
+			default:
+				log_error("Invalid element size: %d", element_size);
+				break;
+		}
+		if (i % 32 == 32 - element_size) {
 			fprintf(file, "\n");
 		} else {
 			fprintf(file, " ");
@@ -49,7 +63,7 @@ int main(void) {
 	for (uint32_t i = 0; i < NOTE_TO_LOG_FREQ_TABLE_SIZE; i++) {
 		buffer_32[i] = note_to_log_freq_base + note_to_log_freq_step * i;
 	}
-	write_hex_bytes_to_file(buffer_8, NOTE_TO_LOG_FREQ_TABLE_SIZE * sizeof(uint32_t), "hex_u32_note_to_log_freq.mem");
+	write_hex_bytes_to_file(buffer_8, NOTE_TO_LOG_FREQ_TABLE_SIZE, sizeof(uint32_t), "hex_u32_note_to_log_freq.mem");
 
 
 	// Log frequency to phase table
@@ -59,21 +73,21 @@ int main(void) {
 		buffer_32[i] = (uint32_t) floor(log_freq_to_phase_base + 0.5);
 		log_freq_to_phase_base *= log_freq_to_phase_mult;
 	}
-	write_hex_bytes_to_file(buffer_8, LOG_FREQ_TO_PHASE_TABLE_SIZE * sizeof(uint32_t), "hex_u32_log_freq_to_phase.mem");
+	write_hex_bytes_to_file(buffer_8, LOG_FREQ_TO_PHASE_TABLE_SIZE, sizeof(uint32_t), "hex_u32_log_freq_to_phase.mem");
 
 
 	// Log sine table (quarter period)
 	for (uint32_t i = 0; i < LOG_SIN_TABLE_SIZE; i++) {
 		buffer_16[i] = (uint16_t) round(-(1 << LOG_SIN_TABLE_BIT_WIDTH) * log(sin((i + 0.5) / LOG_SIN_TABLE_SIZE * M_PI_2)) / log(2));
 	}
-	write_hex_bytes_to_file(buffer_8, LOG_SIN_TABLE_SIZE * sizeof(uint16_t), "hex_u16_log_sin.mem");
+	write_hex_bytes_to_file(buffer_8, LOG_SIN_TABLE_SIZE, sizeof(uint16_t), "hex_u16_log_sin.mem");
 
 
 	// Exp table
 	for (uint32_t i = 0; i < EXP_TABLE_SIZE; i++) {
 		buffer_16[i] = (uint16_t) round((1 << EXP_TABLE_BIT_WIDTH) * (pow(2, (double) i / EXP_TABLE_SIZE) - 1));
 	}
-	write_hex_bytes_to_file(buffer_8, EXP_TABLE_SIZE * sizeof(uint16_t), "hex_u16_exp.mem");
+	write_hex_bytes_to_file(buffer_8, EXP_TABLE_SIZE, sizeof(uint16_t), "hex_u16_exp.mem");
 
 
 	// Coarse log multiplier table
@@ -81,14 +95,14 @@ int main(void) {
 		double x = i == 0 ? 0.5 : i;
 		buffer_32[i] = (int32_t) ((1 << COARSE_LOG_MULT_TABLE_BIT_WIDTH) * (log(x) / log(2)));
 	}
-	write_hex_bytes_to_file(buffer_8, COARSE_LOG_MULT_TABLE_SIZE * sizeof(uint32_t), "hex_i32_coarse_log_mult.mem");
+	write_hex_bytes_to_file(buffer_8, COARSE_LOG_MULT_TABLE_SIZE, sizeof(uint32_t), "hex_i32_coarse_log_mult.mem");
 
 
 	// Fine log multiplier table (like coarse but 1/100th)
 	for (uint32_t i = 0; i < FINE_LOG_MULT_TABLE_SIZE; i++) {
 		buffer_32[i] = (uint32_t) ((1 << FINE_LOG_MULT_TABLE_BIT_WIDTH) * (log(1 + (double) i / 100) / log(2)));
 	}
-	write_hex_bytes_to_file(buffer_8, FINE_LOG_MULT_TABLE_SIZE * sizeof(uint32_t), "hex_u32_fine_log_mult.mem");
+	write_hex_bytes_to_file(buffer_8, FINE_LOG_MULT_TABLE_SIZE, sizeof(uint32_t), "hex_u32_fine_log_mult.mem");
 
 
 	// Algorithm routing table
@@ -106,7 +120,7 @@ int main(void) {
 			[10] = {OUTPUT_MOD_INDEX_MASTER, OUTPUT_MODE_INDEX_1 | OUTPUT_MODE_INDEX_2, OUTPUT_MOD_INDEX_MASTER, OUTPUT_MODE_INDEX_3, OUTPUT_MODE_INDEX_3, OUTPUT_MODE_INDEX_3},
 			// TODO
 	};
-	write_hex_bytes_to_file((uint8_t *) algorithm_routing_table, ALGORITHM_ROUTING_TABLE_SIZE * NUM_OPERATORS, "hex_u8_algorithm_routing.mem");
+	write_hex_bytes_to_file((uint8_t *) algorithm_routing_table, ALGORITHM_ROUTING_TABLE_SIZE * NUM_OPERATORS, 1, "hex_u8_algorithm_routing.mem");
 
 
 	// Level scale table
@@ -117,5 +131,9 @@ int main(void) {
 												   97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110,
 												   111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124,
 												   125, 126, 127};
-	write_hex_bytes_to_file(level_scale, LEVEL_SCALE_TABLE_SIZE, "hex_u8_level_scale.mem");
+	write_hex_bytes_to_file(level_scale, LEVEL_SCALE_TABLE_SIZE, 1, "hex_u8_level_scale.mem");
+
+
+	// Level decibel amplitude table
+
 }

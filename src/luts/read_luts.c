@@ -5,7 +5,25 @@
 #include <stdlib.h>
 #include "read_luts.h"
 
-ret_code_t read_lut(const char *filename, uint8_t *p_data, uint32_t data_len) {
+static uint8_t hex_to_byte(char *p_data) {
+	uint8_t byte = 0;
+	for (uint8_t i = 0; i < 2; i++) {
+		byte <<= 4;
+		if (p_data[i] >= '0' && p_data[i] <= '9') {
+			byte |= p_data[i] - '0';
+		} else if (p_data[i] >= 'A' && p_data[i] <= 'F') {
+			byte |= p_data[i] - 'A' + 10;
+		} else if (p_data[i] >= 'a' && p_data[i] <= 'f') {
+			byte |= p_data[i] - 'a' + 10;
+		} else {
+			log_error("Invalid hex byte: %c%c", p_data[i], p_data[i + 1]);
+			return 0;
+		}
+	}
+	return byte;
+}
+
+ret_code_t read_lut(const char *filename, uint8_t *p_data, uint32_t num_elements, uint32_t element_size) {
 	// build file path
 	char path[256];
 	snprintf(path, sizeof(path), "%s/%s", LUT_GENERATE_DIR, filename);
@@ -37,31 +55,49 @@ ret_code_t read_lut(const char *filename, uint8_t *p_data, uint32_t data_len) {
 	}
 
 	// parse file: // comments, ignore whitespace, hex bytes
-	uint32_t buffer_index = 0;
-	uint32_t data_index = 0;
-	while (buffer_index < file_size && data_index < data_len) {
-		// skip whitespace
-		while (buffer_index < file_size && (buffer[buffer_index] == ' ' || buffer[buffer_index] == '\n' || buffer[buffer_index] == '\r')) {
-			buffer_index++;
-		}
-		// skip comments
-		if (buffer_index < file_size && buffer[buffer_index] == '/') {
-			buffer_index++;
-			if (buffer_index < file_size && buffer[buffer_index] == '/') {
-				buffer_index++;
-				while (buffer_index < file_size && buffer[buffer_index] != '\n') {
-					buffer_index++;
-				}
+	uint32_t buf_in_idx = 0;
+	uint32_t buf_out_idx = 0;
+	uint32_t element_index = 0;
+	while (buf_in_idx < file_size && element_index < num_elements) {
+		// Skip line if // comment
+		if (buffer[buf_in_idx] == '/' && buffer[buf_in_idx + 1] == '/') {
+			while (buffer[buf_in_idx] != '\n' && buf_in_idx < file_size) {
+				buf_in_idx++;
 			}
+			continue;
 		}
-		// parse hex byte
-		if (buffer_index < file_size && buffer[buffer_index] != ' ' && buffer[buffer_index] != '\n' && buffer[buffer_index] != '\r') {
-			char hex_byte[3];
-			hex_byte[0] = buffer[buffer_index++];
-			hex_byte[1] = buffer[buffer_index++];
-			hex_byte[2] = '\0';
-			p_data[data_index++] = (uint8_t) strtol(hex_byte, NULL, 16);
+		// Ignore whitespace
+		if (buffer[buf_in_idx] == ' ' || buffer[buf_in_idx] == '\n' || buffer[buf_in_idx] == '\r' || buffer[buf_in_idx] == '\t') {
+			buf_in_idx++;
+			continue;
 		}
+		// Try parse hex byte with word size e.g. ABCD E123 4567 89AB
+		uint8_t word[4];
+		switch (element_size) {
+			case 1:
+				word[0] = hex_to_byte(&buffer[buf_in_idx]);
+				break;
+			case 2:
+				word[1] = hex_to_byte(&buffer[buf_in_idx]);
+				word[0] = hex_to_byte(&buffer[buf_in_idx + 2]);
+				break;
+			case 4:
+				word[3] = hex_to_byte(&buffer[buf_in_idx]);
+				word[2] = hex_to_byte(&buffer[buf_in_idx + 2]);
+				word[1] = hex_to_byte(&buffer[buf_in_idx + 4]);
+				word[0] = hex_to_byte(&buffer[buf_in_idx + 6]);
+				break;
+			default:
+				break;
+		}
+
+		// Copy word to output buffer
+		for (uint32_t i = 0; i < element_size; i++) {
+			p_data[buf_out_idx + i] = word[i];
+		}
+		buf_out_idx += element_size;
+		buf_in_idx += element_size * 2;
+		element_index++;
 	}
 
 	// close file
