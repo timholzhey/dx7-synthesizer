@@ -1,4 +1,4 @@
-// hex_u32_log_freq_to_phase.mem: 1024 elements [4 bytes each]
+// hex_u32_log_freq_to_phase.mem: 1025 elements [4 bytes each]
 
 17c6f8c7 17cb17ed 17cf37ca 17d3585e 17d779a9 17db9bac 17dfbe66 17e3e1d7
 17e80600 17ec2ae1 17f0507a 17f476cb 17f89dd3 17fcc595 1800ee0e 18051740
@@ -128,3 +128,4 @@
 2ec9c496 2ed1e0e1 2ed9fe94 2ee21dae 2eea3e31 2ef2601d 2efa8372 2f02a830
 2f0ace57 2f12f5e8 2f1b1ee2 2f234947 2f2b7516 2f33a250 2f3bd0f5 2f440105
 2f4c3280 2f546566 2f5c99b9 2f64cf77 2f6d06a2 2f753f3a 2f7d793e 2f85b4af
+2f8df18e 

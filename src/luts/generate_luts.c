@@ -69,11 +69,11 @@ int main(void) {
 	// Log frequency to phase table
 	double log_freq_to_phase_base = (1LL << (SAMPLE_BIT_WIDTH + LOG_FREQ_TO_PHASE_TABLE_BIT_WIDTH)) / AUDIO_SAMPLE_RATE;
 	double log_freq_to_phase_mult = pow(2, 1.0 / LOG_FREQ_TO_PHASE_TABLE_SIZE);
-	for (uint32_t i = 0; i < LOG_FREQ_TO_PHASE_TABLE_SIZE; i++) {
+	for (uint32_t i = 0; i < LOG_FREQ_TO_PHASE_TABLE_SIZE + 1; i++) {
 		buffer_32[i] = (uint32_t) floor(log_freq_to_phase_base + 0.5);
 		log_freq_to_phase_base *= log_freq_to_phase_mult;
 	}
-	write_hex_bytes_to_file(buffer_8, LOG_FREQ_TO_PHASE_TABLE_SIZE, sizeof(uint32_t), "hex_u32_log_freq_to_phase.mem");
+	write_hex_bytes_to_file(buffer_8, LOG_FREQ_TO_PHASE_TABLE_SIZE + 1, sizeof(uint32_t), "hex_u32_log_freq_to_phase.mem");
 
 
 	// Log sine table (quarter period)
