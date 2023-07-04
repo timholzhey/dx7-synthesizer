@@ -196,6 +196,35 @@ static int32_t get_sin_from_angle(uint32_t phase, uint16_t level) {
 	return is_signed ? -result << LOG_FREQ_TO_PHASE_TABLE_SAMPLE_SHIFT : result << LOG_FREQ_TO_PHASE_TABLE_SAMPLE_SHIFT;
 }
 
+static uint32_t envelope_get_sample(uint8_t gate, uint8_t output_level, envelope_params_t *p_env_params, envelope_data_t *p_env_data) {
+	if (p_env_data->state < ENVELOPE_STATE_RELEASE || p_env_data->state == ENVELOPE_STATE_RELEASE && gate == 0) {
+		uint32_t scaled_level = (level_scale_table[p_env_params->levels[p_env_data->state] % LEVEL_SCALE_TABLE_SIZE] << 5) + output_level - 4256;
+		uint32_t target_level = scaled_level << 16;
+		bool is_rising = target_level > p_env_data->level;
+		uint32_t level_increment = 0;
+
+		if (is_rising) {
+			uint32_t jump_target = 1716;
+			if (p_env_data->level < (jump_target << 16)) {
+				p_env_data->level = jump_target << 16;
+			}
+			p_env_data->level += (((17 << 24) - p_env_data->level) >> 24) * level_increment;
+			if (p_env_data->level >= target_level) {
+				p_env_data->level = target_level;
+				p_env_data->state++;
+			}
+		} else {
+			p_env_data->level -= level_increment;
+			if (p_env_data->level <= target_level) {
+				p_env_data->level = target_level;
+				p_env_data->state++;
+			}
+		}
+	}
+
+	return p_env_data->level;
+}
+
 int synthesizer_render(const void *input_buffer, void *output_buffer,
 					   unsigned long frames_per_buffer,
 					   const PaStreamCallbackTimeInfo *time_info,
@@ -237,7 +266,8 @@ int synthesizer_render(const void *input_buffer, void *output_buffer,
 				uint32_t phase_inc = get_phase_from_log_frequency(log_freq);
 
 				// Get level
-				uint16_t op_level = ENVELOPE_MAX - (level_scale_table[op_params->output_level % LEVEL_SCALE_TABLE_SIZE] << (ENVELOPE_BIT_WIDTH - LEVEL_SCALE_TABLE_BIT_WIDTH));
+				// (level_scale_table[op_params->output_level % LEVEL_SCALE_TABLE_SIZE] << (ENVELOPE_BIT_WIDTH - LEVEL_SCALE_TABLE_BIT_WIDTH));
+				uint16_t op_level = ENVELOPE_MAX - envelope_get_sample(data->voice_data[voice_idx].gate, op_params->output_level, &op_params->env, &op_data->envelope_data);
 
 				// Sample sine wave
 				int32_t sample = get_sin_from_angle(op_data->phase + op_data->input_mod_buffer, op_level);

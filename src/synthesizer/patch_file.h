@@ -12,14 +12,8 @@
 #define PATCH_FILE_NUM_VOICES			32
 
 typedef struct {
-	uint8_t rate1;
-	uint8_t rate2;
-	uint8_t rate3;
-	uint8_t rate4;
-	uint8_t level1;
-	uint8_t level2;
-	uint8_t level3;
-	uint8_t level4;
+	uint8_t rates[4];
+	uint8_t levels[4];
 } envelope_params_t;
 
 typedef struct {
