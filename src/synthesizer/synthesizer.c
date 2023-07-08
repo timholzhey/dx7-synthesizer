@@ -27,6 +27,7 @@ static int32_t get_sin_from_angle(uint32_t phase, uint16_t level);
 static uint16_t get_log_sin_from_angle(uint16_t phi);
 static uint32_t get_oscillator_log_frequency(uint8_t midi_note, uint8_t mode, uint8_t coarse, uint8_t fine, uint8_t detune);
 static uint32_t get_phase_from_log_frequency(uint32_t log_freq);
+static uint32_t envelope_get_sample(uint8_t gate, uint8_t output_level, envelope_params_t *p_env_params, envelope_data_t *p_env_data);
 
 synth_data_t synth_data;
 
@@ -46,60 +47,11 @@ ret_code_t synthesizer_init(void) {
 	// Load default sample
 	RET_ON_FAIL(patch_file_load_patch(DEFAULT_PATCH_FILE_VOICE - 1, &synth_data.voice_params));
 
-	// Test 1 operator
-	voice_params_t params = {
-			.algorithm = 4,
-			.name = "TEST      ",
-			.operators = {
-					[0] = {
-						.osc = {.frequency_coarse = 1, .detune = 7},
-						.output_level = 99,
-					},/*
-					[1] = {
-						.osc = {.frequency_coarse = 14},
-						.output_level = 58,
-					},
-					[2] = {
-						.osc = {.frequency_coarse = 1},
-						.output_level = 99,
-					},
-					[3] = {
-						.osc = {.frequency_coarse = 1},
-						.output_level = 88,
-					}*/
-			}
-	};
-	//memcpy(&synth_data.voice_params, &params, sizeof(voice_params_t));
-	// voice_assign_key(60, 127);
-
-//	for (uint32_t i = 0; i < 5; i++) {
-//		for (uint32_t j = 0; j < 5; j++) {
-//			for (uint32_t k = 0; k < 10; k++) {
-//				printf("32'd%u, ", get_sin_from_angle((i << LOG_FREQ_TO_PHASE_TABLE_SAMPLE_SHIFT) + (j << LOG_FREQ_TO_PHASE_TABLE_SAMPLE_SHIFT), k));
-//			}
-//			printf("\n");
-//		}
-//	}
-
-	for (uint32_t i = 50; i < 55; i++) {
-		for (uint32_t j = 0; j < 2; j++) {
-			for (uint32_t k = 0; k < 5; k++) {
-				for (uint32_t l = 0; l < 5; l++) {
-					for (uint32_t m = 0; m < 5; m++) {
-						uint32_t log_freq = get_oscillator_log_frequency(i, j, k, l, m);
-						uint32_t phase_inc = get_phase_from_log_frequency(log_freq);
-						printf("32'd%u, ", phase_inc);
-					}
-				}
-				printf("\n");
-			}
-		}
+	envelope_params_t params = {.levels = {99, 75, 0, 0}, .rates = {96, 25, 25, 67}};
+	envelope_data_t data = {.level = 0, .state = 0};
+	for (uint32_t i = 0; i < 3 * AUDIO_SAMPLE_RATE; i++) {
+		printf("%u\n", envelope_get_sample(0, 99, &params, &data));
 	}
-
-//	uint32_t log_freq = get_oscillator_log_frequency(52, 0, 3, 4, 0);
-//	printf("Log freq %u\n", log_freq);
-//	uint32_t phase_inc = get_phase_from_log_frequency(log_freq);
-//	printf("Phase inc %u\n", phase_inc);
 
 	return RET_CODE_OK;
 }
@@ -112,18 +64,12 @@ ret_code_t synthesizer_init(void) {
  */
 static uint32_t get_phase_from_log_frequency(uint32_t log_freq) {
 	uint16_t index = (log_freq & SAMPLE_MASK) >> LOG_FREQ_TO_PHASE_TABLE_SAMPLE_SHIFT;
-//	printf("Index %u\n", index);
 	uint32_t phase_low = log_freq_to_phase_table[index];
-//	printf("Phase low %u\n", phase_low);
 	uint32_t phase_high = log_freq_to_phase_table[index + 1];
-//	printf("Phase high %u\n", phase_high);
 	uint32_t low_bits = log_freq & ((1 << LOG_FREQ_TO_PHASE_TABLE_SAMPLE_SHIFT) - 1);
-//	printf("Low bits %u\n", low_bits);
 	uint32_t high_bits = log_freq >> SAMPLE_BIT_WIDTH;
-//	printf("High bits %u\n", high_bits);
 	uint64_t slope = (int64_t) (phase_high - phase_low) * (int64_t) low_bits;
 	uint32_t phase = phase_low + (int32_t) (slope >> LOG_FREQ_TO_PHASE_TABLE_SAMPLE_SHIFT);
-//	printf("Phase %u\n", phase);
 	return LOG_FREQ_TO_PHASE_TABLE_BIT_WIDTH >= high_bits ? phase >> (LOG_FREQ_TO_PHASE_TABLE_BIT_WIDTH - high_bits) : 0;
 }
 
@@ -198,10 +144,14 @@ static int32_t get_sin_from_angle(uint32_t phase, uint16_t level) {
 
 static uint32_t envelope_get_sample(uint8_t gate, uint8_t output_level, envelope_params_t *p_env_params, envelope_data_t *p_env_data) {
 	if (p_env_data->state < ENVELOPE_STATE_RELEASE || p_env_data->state == ENVELOPE_STATE_RELEASE && gate == 0) {
-		uint32_t scaled_level = (level_scale_table[p_env_params->levels[p_env_data->state] % LEVEL_SCALE_TABLE_SIZE] << 5) + output_level - 4256;
+		int32_t scaled_level = (level_scale_table[p_env_params->levels[p_env_data->state] % LEVEL_SCALE_TABLE_SIZE] << 5) + (output_level << 5) - 4256;
+		scaled_level = scaled_level < 16 ? 16 : scaled_level;
 		uint32_t target_level = scaled_level << 16;
 		bool is_rising = target_level > p_env_data->level;
-		uint32_t level_increment = 0;
+
+		uint32_t scaled_rate = ((p_env_params->rates[p_env_data->state] * 41) >> 6);
+		uint32_t level_increment = (4 + (scaled_rate & 3)) << (2 + ((scaled_rate & ((1 << 6) - 1)) >> 2));
+		printf("Scaled level: %u, target level: %u, is rising: %u, level increment: %u, level: %u, state %u, gate %u\n", scaled_level, target_level, is_rising, level_increment, p_env_data->level, p_env_data->state, gate);
 
 		if (is_rising) {
 			uint32_t jump_target = 1716;
@@ -222,7 +172,7 @@ static uint32_t envelope_get_sample(uint8_t gate, uint8_t output_level, envelope
 		}
 	}
 
-	return p_env_data->level;
+	return p_env_data->level >> 19;
 }
 
 int synthesizer_render(const void *input_buffer, void *output_buffer,
@@ -266,7 +216,6 @@ int synthesizer_render(const void *input_buffer, void *output_buffer,
 				uint32_t phase_inc = get_phase_from_log_frequency(log_freq);
 
 				// Get level
-				// (level_scale_table[op_params->output_level % LEVEL_SCALE_TABLE_SIZE] << (ENVELOPE_BIT_WIDTH - LEVEL_SCALE_TABLE_BIT_WIDTH));
 				uint16_t op_level = ENVELOPE_MAX - envelope_get_sample(data->voice_data[voice_idx].gate, op_params->output_level, &op_params->env, &op_data->envelope_data);
 
 				// Sample sine wave
@@ -309,7 +258,7 @@ int synthesizer_render(const void *input_buffer, void *output_buffer,
 		visualization_add_sample(master_buffer, lowest_note);
 
 		// Amplify
-		master_buffer <<= 1;
+		master_buffer <<= 3;
 
 		// Write mono to stereo output buffer
 		*out++ = master_buffer;

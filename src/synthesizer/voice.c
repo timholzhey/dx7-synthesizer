@@ -11,7 +11,7 @@ bool voice_active[NUM_VOICES];
 void voice_init(void) {
 	for (uint8_t i = 0; i < NUM_VOICES; i++) {
 		voice_active[i] = false;
-		synth_data.voice_data[i].gate = false;
+		synth_data.voice_data[i].gate = 0;
 		synth_data.voice_data[i].note = 0;
 	}
 }
