@@ -38,7 +38,13 @@ ret_code_t synthesizer_init(void) {
 	RET_ON_FAIL(READ_LUT("hex_i32_coarse_log_mult.mem", coarse_log_mult_table));
 	RET_ON_FAIL(READ_LUT("hex_u32_fine_log_mult.mem", fine_log_mult_table));
 	RET_ON_FAIL(READ_LUT("hex_u8_level_scale.mem", level_scale_table));
-	RET_ON_FAIL(read_lut("hex_u8_algorithm_routing.mem", (uint8_t *) algorithm_routing_table, ALGORITHM_ROUTING_TABLE_SIZE * NUM_OPERATORS, 1));
+	uint64_t algorithm_routing_table_raw[ALGORITHM_ROUTING_TABLE_SIZE];
+	RET_ON_FAIL(READ_LUT("hex_u64_algorithm_routing.mem", algorithm_routing_table_raw));
+	for (uint32_t i = 0; i < ALGORITHM_ROUTING_TABLE_SIZE; i++) {
+		for (uint32_t j = 0; j < NUM_OPERATORS; j++) {
+			algorithm_routing_table[i][j] = (algorithm_routing_table_raw[i] >> (j * 8)) & 0xFF;
+		}
+	}
 
 	// Load default patch file
 	RET_ON_FAIL(patch_file_load_rom(DEFAULT_PATCH_FILE));
@@ -81,20 +87,20 @@ ret_code_t synthesizer_init(void) {
 //		}
 //	}
 
-	for (uint32_t i = 50; i < 55; i++) {
-		for (uint32_t j = 0; j < 2; j++) {
-			for (uint32_t k = 0; k < 5; k++) {
-				for (uint32_t l = 0; l < 5; l++) {
-					for (uint32_t m = 0; m < 5; m++) {
-						uint32_t log_freq = get_oscillator_log_frequency(i, j, k, l, m);
-						uint32_t phase_inc = get_phase_from_log_frequency(log_freq);
-						printf("32'd%u, ", phase_inc);
-					}
-				}
-				printf("\n");
-			}
-		}
-	}
+//	for (uint32_t i = 50; i < 55; i++) {
+//		for (uint32_t j = 0; j < 2; j++) {
+//			for (uint32_t k = 0; k < 5; k++) {
+//				for (uint32_t l = 0; l < 5; l++) {
+//					for (uint32_t m = 0; m < 5; m++) {
+//						uint32_t log_freq = get_oscillator_log_frequency(i, j, k, l, m);
+//						uint32_t phase_inc = get_phase_from_log_frequency(log_freq);
+//						printf("32'd%u, ", phase_inc);
+//					}
+//				}
+//				printf("\n");
+//			}
+//		}
+//	}
 
 //	uint32_t log_freq = get_oscillator_log_frequency(52, 0, 3, 4, 0);
 //	printf("Log freq %u\n", log_freq);
@@ -223,7 +229,7 @@ int synthesizer_render(const void *input_buffer, void *output_buffer,
 				operator_data_t *op_data = &data->voice_data[voice_idx].operator_data[operator_idx];
 				op_data->input_mod_buffer = 0;
 				if (routing[operator_idx] & (1 << operator_idx)) {
-					op_data->input_mod_buffer = data->voice_data[voice_idx].feedback_buffer >> (FEEDBACK_BIT_WIDTH - data->voice_params.feedback + 1);
+					op_data->input_mod_buffer = data->voice_data[voice_idx].feedback_buffer >> (FEEDBACK_BIT_WIDTH - data->voice_params.feedback);
 				}
 			}
 

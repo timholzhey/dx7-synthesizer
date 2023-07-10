@@ -72,7 +72,7 @@ ret_code_t read_lut(const char *filename, uint8_t *p_data, uint32_t num_elements
 			continue;
 		}
 		// Try parse hex byte with word size e.g. ABCD E123 4567 89AB
-		uint8_t word[4];
+		uint8_t word[8];
 		switch (element_size) {
 			case 1:
 				word[0] = hex_to_byte(&buffer[buf_in_idx]);
@@ -86,6 +86,16 @@ ret_code_t read_lut(const char *filename, uint8_t *p_data, uint32_t num_elements
 				word[2] = hex_to_byte(&buffer[buf_in_idx + 2]);
 				word[1] = hex_to_byte(&buffer[buf_in_idx + 4]);
 				word[0] = hex_to_byte(&buffer[buf_in_idx + 6]);
+				break;
+			case 8:
+				word[7] = hex_to_byte(&buffer[buf_in_idx]);
+				word[6] = hex_to_byte(&buffer[buf_in_idx + 2]);
+				word[5] = hex_to_byte(&buffer[buf_in_idx + 4]);
+				word[4] = hex_to_byte(&buffer[buf_in_idx + 6]);
+				word[3] = hex_to_byte(&buffer[buf_in_idx + 8]);
+				word[2] = hex_to_byte(&buffer[buf_in_idx + 10]);
+				word[1] = hex_to_byte(&buffer[buf_in_idx + 12]);
+				word[0] = hex_to_byte(&buffer[buf_in_idx + 14]);
 				break;
 			default:
 				break;
