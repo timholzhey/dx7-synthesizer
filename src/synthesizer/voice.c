@@ -53,7 +53,6 @@ ret_code_t voice_assign_key(uint8_t midi_key, uint8_t velocity) {
 				synth_data.voice_data[i].operator_data[j].envelope_data.level = 0;
 			}
 			found = true;
-			log_info("Found inactive voice %d", i);
 			break;
 		}
 	}
