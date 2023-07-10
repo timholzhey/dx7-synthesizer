@@ -206,6 +206,7 @@ HTTP_ROUTE_METHOD("api/get_params", get_params, HTTP_METHOD_GET) {
 WEBSOCKET_ROUTE("api/midi", midi) {
 	switch (websocket.event) {
 		case WEBSOCKET_EVENT_DATA:
+			printf("MIDI message: %02X %02X %02X\n", websocket.data[0], websocket.data[1], websocket.data[2]);
 			if (websocket.data_length != 3) {
 				log_error("Invalid MIDI message length: %u", websocket.data_length);
 				return;

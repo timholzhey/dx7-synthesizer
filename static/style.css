@@ -1,0 +1,194 @@
+:root {
+    --primary-background-color: #040404;
+    --secondary-background-color: #0e0e0e;
+    --tertiary-background-color: #1a1a1a;
+    --highlight-color: #2b8689;
+    --primary-text-color: #f4f4f4;
+}
+
+* {
+    box-sizing: border-box
+}
+
+body {
+    font-family: "Open Sans", sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: var(--primary-background-color);
+    width: 100vw;
+    height: 100vh;
+    color: var(--primary-text-color);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.page-container {
+    position: absolute;
+    width: calc(100% - 20rem);
+    overflow: hidden;
+    height: 100%;
+    margin: 0 10rem;
+    background-color: var(--secondary-background-color);
+}
+
+.controls {
+    width: 100%;
+    height: 100%;
+    padding: 2em;
+}
+
+.info {
+    display: flex;
+    justify-content: space-between;
+    flex-direction: row;
+}
+
+#viz {
+    background-color: var(--tertiary-background-color);
+    margin: 0.25rem 0;
+    padding: 0.5rem 0.25rem;
+}
+
+.patch {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 100%;
+}
+
+.patch .patch-setting {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin: 0.25rem 0;
+}
+
+.patch .patch-setting select {
+    width: 100%;
+    height: 100%;
+    padding: 0.5rem;
+    margin: 0 0.5rem;
+    border-radius: 0.25em;
+    background-color: var(--tertiary-background-color);
+    color: var(--primary-text-color);
+    border: none;
+    outline: none;
+}
+
+.patch .patch-setting button {
+    width: 100%;
+    height: 100%;
+    padding: 0.5rem;
+    border-radius: 0.25em;
+    background-color: var(--tertiary-background-color);
+    color: var(--primary-text-color);
+    border: none;
+    outline: none;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.patch .patch-setting button:hover {
+    background-color: var(--highlight-color);
+    cursor: pointer;
+}
+
+.operators {
+    width: 100%;
+    height: 45%;
+    margin: 0.5rem 0;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+    grid-gap: 1em;
+}
+
+.operator {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 0.25em;
+    background-color: var(--tertiary-background-color);
+}
+
+.keyboard {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 30%;
+    position: absolute;
+    bottom: 0;
+    user-select: none;
+    margin: 0.25rem;
+    overflow: hidden;
+}
+
+.keyboard-keys {
+    height: 100%;
+    width: 100%;
+    position: relative;
+    margin: 0;
+    padding: 0.25rem;
+}
+
+.key {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    position: relative;
+    float: left;
+}
+
+.keyboard-keys .white {
+    height: 100%;
+    width: 3em;
+    z-index: 1;
+    border-left: 1px solid #bbb;
+    border-bottom: 1px solid #bbb;
+    border-radius: 0 0 5px 5px;
+    box-shadow: -1px 0 0 rgba(255, 255, 255, 0.8) inset, 0 0 5px #ccc inset, 0 0 3px rgba(0, 0, 0, 0.2);
+    background: linear-gradient(to bottom, #eee 0%, #fff 100%);
+}
+
+.key.white.active {
+    border-top: 1px solid #777;
+    border-left: 1px solid #999;
+    border-bottom: 1px solid #999;
+    box-shadow: 2px 0 3px rgba(0, 0, 0, 0.1) inset, -5px 5px 20px rgba(0, 0, 0, 0.2) inset, 0 0 3px rgba(0, 0, 0, 0.2);
+    background: linear-gradient(to bottom, #fff 0%, #e9e9e9 100%);
+}
+
+.key.black {
+    height: 65%;
+    width: 1.5em;
+    margin: 0 0 0 -0.75em;
+    z-index: 2;
+    border: 1px solid #000;
+    border-radius: 0 0 3px 3px;
+    box-shadow: -1px -1px 2px rgba(255, 255, 255, 0.2) inset, 0 -5px 2px 3px rgba(0, 0, 0, 0.6) inset, 0 2px 4px rgba(0, 0, 0, 0.5);
+    background: linear-gradient(45deg, #222 0%, #555 100%);
+}
+
+.key.black.active {
+    box-shadow: -1px -1px 2px rgba(255, 255, 255, 0.2) inset, 0 -2px 2px 3px rgba(0, 0, 0, 0.6) inset, 0 1px 2px rgba(0, 0, 0, 0.5);
+    background: linear-gradient(to right, #444 0%, #222 100%);
+}
+
+[data-note="d"], [data-note="e"], [data-note="g"], [data-note="a"], [data-note="b"] {
+    margin: 0 0 0 -0.75em;
+}
+
+.keyboard-keys li:first-child {
+    border-radius: 5px 0 5px 5px;
+}
+
+.keyboard-keys li:last-child {
+    border-radius: 0 5px 5px 5px;
+}
