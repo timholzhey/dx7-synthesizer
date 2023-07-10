@@ -20,7 +20,7 @@ typedef enum {
 
 typedef struct {
 	envelope_state_t state;
-	uint32_t level;
+	int32_t level;
 } envelope_data_t;
 
 typedef struct {

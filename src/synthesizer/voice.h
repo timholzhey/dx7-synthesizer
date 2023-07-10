@@ -10,6 +10,8 @@
 
 void voice_init(void);
 
+void voice_update(void);
+
 ret_code_t voice_assign_key(uint8_t midi_key, uint8_t velocity);
 
 void voice_release_key(uint8_t midi_key, uint8_t velocity);

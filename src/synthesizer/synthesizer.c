@@ -27,6 +27,7 @@ static int32_t get_sin_from_angle(uint32_t phase, uint16_t level);
 static uint16_t get_log_sin_from_angle(uint16_t phi);
 static uint32_t get_oscillator_log_frequency(uint8_t midi_note, uint8_t mode, uint8_t coarse, uint8_t fine, uint8_t detune);
 static uint32_t get_phase_from_log_frequency(uint32_t log_freq);
+static uint32_t envelope_get_sample(uint8_t gate, uint8_t output_level, envelope_params_t *p_env_params, envelope_data_t *p_env_data);
 
 synth_data_t synth_data;
 
@@ -202,6 +203,33 @@ static int32_t get_sin_from_angle(uint32_t phase, uint16_t level) {
 	return is_signed ? -result << LOG_FREQ_TO_PHASE_TABLE_SAMPLE_SHIFT : result << LOG_FREQ_TO_PHASE_TABLE_SAMPLE_SHIFT;
 }
 
+static uint32_t envelope_get_sample(uint8_t gate, uint8_t output_level, envelope_params_t *p_env_params, envelope_data_t *p_env_data) {
+	if (p_env_data->state != ENVELOPE_STATE_OFF && gate == 0) {
+		p_env_data->state = ENVELOPE_STATE_RELEASE;
+	}
+
+	if (p_env_data->state < ENVELOPE_STATE_RELEASE || (p_env_data->state == ENVELOPE_STATE_RELEASE && gate == 0)) {
+		int32_t target_level = level_scale_table[p_env_params->levels[p_env_data->state]] << 24;
+		uint32_t delta_level = ((p_env_params->rates[p_env_data->state] * ((p_env_params->rates[p_env_data->state] >> 2) + 4)) + 16) << 9;
+
+		if (target_level > p_env_data->level) {
+			p_env_data->level += delta_level;
+			if (p_env_data->level > target_level) {
+				p_env_data->level = target_level;
+				p_env_data->state++;
+			}
+		} else {
+			p_env_data->level -= (delta_level >> 11) * (delta_level >> 11);
+			if (p_env_data->level < target_level) {
+				p_env_data->level = target_level;
+				p_env_data->state++;
+			}
+		}
+	}
+
+	return ((((p_env_data->level >> 24) + 1) * (level_scale_table[output_level] + 1)) >> 5) - 1;
+}
+
 int synthesizer_render(const void *input_buffer, void *output_buffer,
 					   unsigned long frames_per_buffer,
 					   const PaStreamCallbackTimeInfo *time_info,
@@ -229,7 +257,7 @@ int synthesizer_render(const void *input_buffer, void *output_buffer,
 				operator_data_t *op_data = &data->voice_data[voice_idx].operator_data[operator_idx];
 				op_data->input_mod_buffer = 0;
 				if (routing[operator_idx] & (1 << operator_idx)) {
-					op_data->input_mod_buffer = data->voice_data[voice_idx].feedback_buffer >> (FEEDBACK_BIT_WIDTH - data->voice_params.feedback);
+					op_data->input_mod_buffer = data->voice_data[voice_idx].feedback_buffer >> (FEEDBACK_BIT_WIDTH - data->voice_params.feedback + 1);
 				}
 			}
 
@@ -243,7 +271,9 @@ int synthesizer_render(const void *input_buffer, void *output_buffer,
 				uint32_t phase_inc = get_phase_from_log_frequency(log_freq);
 
 				// Get level
-				uint16_t op_level = ENVELOPE_MAX - (level_scale_table[op_params->output_level % LEVEL_SCALE_TABLE_SIZE] << (ENVELOPE_BIT_WIDTH - LEVEL_SCALE_TABLE_BIT_WIDTH));
+				uint16_t op_level = ENVELOPE_MAX - envelope_get_sample(data->voice_data[voice_idx].gate,
+																	   op_params->output_level,
+																	   &op_params->env, &op_data->envelope_data);
 
 				// Sample sine wave
 				int32_t sample = get_sin_from_angle(op_data->phase + op_data->input_mod_buffer, op_level);
@@ -264,7 +294,7 @@ int synthesizer_render(const void *input_buffer, void *output_buffer,
 				// Route to other operators
 				for (uint8_t output_index = 0; output_index < NUM_OPERATORS; output_index++) {
 					if (routing[operator_idx] & (1 << output_index)) {
-						data->voice_data[voice_idx].operator_data[output_index].input_mod_buffer += sample;
+						data->voice_data[voice_idx].operator_data[output_index].input_mod_buffer += sample * 0.75;
 					}
 				}
 			}

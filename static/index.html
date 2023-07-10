@@ -181,6 +181,7 @@
 
         const ws_midi = new WebSocket(`ws://${window.location.host}/api/midi`);
         document.addEventListener("keydown", function(event) {
+            if (event.repeat) return;
             const note = qwertyNotes[event.keyCode];
             console.log(event.keyCode, note);
             if (note !== undefined) {
@@ -188,6 +189,7 @@
             }
         });
         document.addEventListener("keyup", function(event) {
+            if (event.repeat) return;
             const note = qwertyNotes[event.keyCode];
             if (note !== undefined) {
                 ws_midi.send(new Uint8Array([0x80, note, 0x40]));
