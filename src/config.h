@@ -14,7 +14,7 @@
 #define NUM_OPERATORS							6
 
 #define ENVELOPE_BIT_WIDTH						9
-#define ENVELOPE_MAX							(1 << ENVELOPE_BIT_WIDTH)
+#define ENVELOPE_MAX							((1 << ENVELOPE_BIT_WIDTH) - 1)
 
 #define FEEDBACK_BIT_WIDTH						8
 
