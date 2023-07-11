@@ -63,6 +63,7 @@ window.onload = function () {
     loadParams();
 
     // Visualization
+    let samples = new Int32Array(1024).fill(0);
     fetch(`http://${window.location.host}/api/viz_stream`)
         .then(async (response) => {
             const reader = response.body.getReader();
@@ -71,34 +72,38 @@ window.onload = function () {
                     console.log("Invalid chunk size");
                     continue;
                 }
-                const samples = new Int32Array(chunk.buffer);
-                let max = 0;
-                for (let i = 0; i < samples.length; i++) {
-                    const sample = samples[i] / 32768;
-                    samples[i] = sample;
-                    if (Math.abs(sample) > max) {
-                        max = Math.abs(sample);
-                    }
-                }
-                const canvas = document.getElementById("viz");
-                const ctx = canvas.getContext("2d");
-                const width = canvas.width;
-                const height = canvas.height;
-                const xStep = width / samples.length;
-                const yStep = height / 2 / max;
-                ctx.strokeStyle = "#ffffff";
-                ctx.lineWidth = 2;
-                ctx.clearRect(0, 0, width, height);
-                ctx.beginPath();
-                for (let i = 0; i < samples.length; i++) {
-                    if (i === 0) {
-                        ctx.moveTo(0, height / 2 + samples[i] * yStep);
-                    }
-                    ctx.lineTo(i * xStep, height / 2 + samples[i] * yStep);
-                }
-                ctx.stroke();
+                samples = new Int32Array(chunk.buffer);
             }
-        })
+        });
+    
+    setInterval(function () {
+        let max = 0;
+        for (let i = 0; i < samples.length; i++) {
+            const sample = samples[i] / 32768;
+            samples[i] = sample;
+            if (Math.abs(sample) > max) {
+                max = Math.abs(sample);
+            }
+        }
+        const canvas = document.getElementById("viz");
+        const ctx = canvas.getContext("2d");
+        const width = canvas.width;
+        const height = canvas.height;
+        const xStep = width / samples.length;
+        let yStep = height / 2 / max;
+        yStep = Math.min(yStep, 1);
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 2;
+        ctx.clearRect(0, 0, width, height);
+        ctx.beginPath();
+        for (let i = 0; i < samples.length; i++) {
+            if (i === 0) {
+                ctx.moveTo(0, height / 2 + samples[i] * yStep);
+            }
+            ctx.lineTo(i * xStep, height / 2 + samples[i] * yStep);
+        }
+        ctx.stroke();
+    }, 1000 / 30);
 
     function readChunks(reader) {
         return {
@@ -167,7 +172,6 @@ window.onload = function () {
     document.addEventListener("keydown", function (event) {
         if (event.repeat) return;
         const note = qwertyNotes[event.keyCode];
-        console.log(event.keyCode, note);
         if (note !== undefined) {
             ws_midi.send(new Uint8Array([0x90, note, 0x40]));
         }
@@ -236,4 +240,9 @@ window.onload = function () {
 
     // Init
     fetch("/api/init", {method: "POST"});
+
+    // Update controls UI
+    function updateControlsUI() {
+        
+    }
 }

@@ -294,7 +294,7 @@ int synthesizer_render(const void *input_buffer, void *output_buffer,
 				// Route to other operators
 				for (uint8_t output_index = 0; output_index < NUM_OPERATORS; output_index++) {
 					if (routing[operator_idx] & (1 << output_index)) {
-						data->voice_data[voice_idx].operator_data[output_index].input_mod_buffer += sample * 0.9;
+						data->voice_data[voice_idx].operator_data[output_index].input_mod_buffer += (sample * 100) >> 7;
 					}
 				}
 			}
