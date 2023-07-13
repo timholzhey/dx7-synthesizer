@@ -171,12 +171,12 @@ HTTP_ROUTE_METHOD("api/get_params", get_params, HTTP_METHOD_GET) {
 	index += snprintf(json_string + index, string_length - index, "\"operators\":[");
 	for (uint8_t i = 0; i < NUM_OPERATORS; i++) {
 		index += snprintf(json_string + index, string_length - index,
-						  "{\"env\":{\"rates[0]\":%u,\"levels[0]\":%u,\"rates[1]\":%u,\"levels[1]\":%u,\"rates[2]\":%u,\"levels[2]\":%u,\"rates[3]\":%u,\"levels[3]\":%u},"
+						  "{\"env\":{\"rates\":[%u,%u,%u,%u],\"levels\":[%u,%u,%u,%u]},"
 						  "\"kls\":{\"break_point\":%u,\"left_depth\":%u,\"right_depth\":%u,\"left_curve\":%u,\"right_curve\":%u},"
 						  "\"osc\":{\"mode\":%u,\"frequency_coarse\":%u,\"frequency_fine\":%u,\"detune\":%u},"
 						  "\"keyboard_rate_scaling\":%u,\"amplitude_modulation_sensitivity\":%u,\"key_velocity_sensitivity\":%u,\"output_level\":%u}",
-		p_params->operators[i].env.rates[0], p_params->operators[i].env.levels[0], p_params->operators[i].env.rates[1], p_params->operators[i].env.levels[1],
-		p_params->operators[i].env.rates[2], p_params->operators[i].env.levels[2], p_params->operators[i].env.rates[3], p_params->operators[i].env.levels[3],
+		p_params->operators[i].env.rates[0], p_params->operators[i].env.rates[1], p_params->operators[i].env.rates[2], p_params->operators[i].env.rates[3],
+		p_params->operators[i].env.levels[0], p_params->operators[i].env.levels[1], p_params->operators[i].env.levels[2], p_params->operators[i].env.levels[3],
 		p_params->operators[i].kls.break_point, p_params->operators[i].kls.left_depth, p_params->operators[i].kls.right_depth,
 		p_params->operators[i].kls.left_curve, p_params->operators[i].kls.right_curve, p_params->operators[i].osc.mode,
 		p_params->operators[i].osc.frequency_coarse, p_params->operators[i].osc.frequency_fine, p_params->operators[i].osc.detune,
@@ -188,11 +188,11 @@ HTTP_ROUTE_METHOD("api/get_params", get_params, HTTP_METHOD_GET) {
 	}
 	index += snprintf(json_string + index, string_length - index, "],");
 	index += snprintf(json_string + index, string_length - index,
-					  "\"pitch_eg\":{\"rates[1]\":%u,\"levels[1]\":%u,\"rates[2]\":%u,\"levels[2]\":%u,\"rates[3]\":%u,\"levels[3]\":%u,\"rates[4]\":%u,\"levels[4]\":%u},"
+					  "\"pitch_eg\":{\"rates\":[%u,%u,%u,%u],\"levels\":[%u,%u,%u,%u]},"
 					  "\"lfo\":{\"speed\":%u,\"delay\":%u,\"pitch_modulation_depth\":%u,\"amplitude_modulation_depth\":%u,\"sync\":%u,\"wave\":%u,\"pitch_modulation_sensitivity\":%u},"
 					  "\"algorithm\":%u,\"feedback\":%u,\"oscillator_key_sync\":%u,\"transpose\":%u,\"name\":\"%s\"}",
-	p_params->pitch_eg.rates[0], p_params->pitch_eg.levels[0], p_params->pitch_eg.rates[1], p_params->pitch_eg.levels[1],
-	p_params->pitch_eg.rates[2], p_params->pitch_eg.levels[2], p_params->pitch_eg.rates[3], p_params->pitch_eg.levels[3],
+	p_params->pitch_eg.rates[0], p_params->pitch_eg.rates[1], p_params->pitch_eg.rates[2], p_params->pitch_eg.rates[3],
+	p_params->pitch_eg.levels[0], p_params->pitch_eg.levels[1], p_params->pitch_eg.levels[2], p_params->pitch_eg.levels[3],
 	p_params->lfo.speed, p_params->lfo.delay, p_params->lfo.pitch_modulation_depth, p_params->lfo.amplitude_modulation_depth,
 	p_params->lfo.sync, p_params->lfo.wave, p_params->lfo.pitch_modulation_sensitivity,
 	p_params->algorithm, p_params->feedback, p_params->oscillator_key_sync, p_params->transpose, p_params->name);

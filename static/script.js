@@ -57,7 +57,7 @@ window.onload = function () {
         fetch(`http://${window.location.host}/api/get_params`)
             .then(response => response.json())
             .then(data => {
-                // voice_params.innerHTML = JSON.stringify(data.params, null, 2);
+                updateControlValues(data.params);
             });
     };
     loadParams();
@@ -241,8 +241,49 @@ window.onload = function () {
     // Init
     fetch("/api/init", {method: "POST"});
 
-    // Update controls UI
-    function updateControlsUI() {
-        
+    // Update control UI
+    function updateControlUI() {
+        const knobs = document.querySelectorAll(".param.knob");
+        knobs.forEach(knob => {
+            const value = knob.getAttribute("data-value");
+            const min = knob.getAttribute("data-min");
+            const max = knob.getAttribute("data-max");
+            const angle = (value - min) / (max - min) * 270;
+            knob.querySelector(".param-handle").style.transform = `rotate(${angle}deg)`;
+        });
+
+        const sliders = document.querySelectorAll(".param.slider");
+        sliders.forEach(slider => {
+            const value = slider.getAttribute("data-value");
+            const min = slider.getAttribute("data-min");
+            const max = slider.getAttribute("data-max");
+            const range = max - min;
+            const percent = (value - min) / range * 75;
+            slider.querySelector(".param-handle").style.left = `${percent}%`;
+        });
+
+        const toggles = document.querySelectorAll(".param.toggle");
+        toggles.forEach(toggle => {
+            const value = toggle.getAttribute("data-value");
+            if (value === "true") {
+                toggle.classList.add("active");
+            } else {
+                toggle.classList.remove("active");
+            }
+        });
+    }
+
+    // Update control values
+    function updateControlValues(data) {
+        const params = document.querySelectorAll(".param");
+        params.forEach(param => {
+            const paramField = param.getAttribute("data-param");
+            try {
+                param.setAttribute("data-value", eval(`data.${paramField}`));
+            } catch (e) {
+                console.log(e);
+            }
+        });
+        updateControlUI();
     }
 }

@@ -30,7 +30,7 @@ body {
 .page-container {
     position: absolute;
     width: 100%;
-    max-width: 70em;
+    max-width: 75em;
     overflow: hidden;
     height: 100%;
     background-color: var(--secondary-background-color);
@@ -111,6 +111,7 @@ body {
     grid-gap: 1em;
     overflow: hidden;
     font-size: 0.6rem;
+    max-height: 40em;
 }
 
 .operator {
@@ -154,6 +155,7 @@ body {
 
 .kls-params {
     grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(2, 1fr);
 }
 
 .param {
@@ -193,7 +195,7 @@ body {
     border: 3px solid #666;
 }
 
-.param.knob:after {
+.param.knob .param-handle {
     content: "";
     position: absolute;
     top: 50%;
@@ -213,15 +215,19 @@ body {
     border-radius: 0.15em;
 }
 
-.param.toggle:after {
+.param.toggle .param-handle {
     content: "";
     position: absolute;
-    top: 0%;
-    left: 0%;
+    top: 0;
+    left: 0;
     width: 1.5em;
     height: 1.5em;
     background-color: #e2e2e2;
     border-radius: 0.15em;
+}
+
+.param.toggle.active .param-handle {
+    left: 50%;
 }
 
 .param.slider {
@@ -231,7 +237,7 @@ body {
     border-radius: 0.15em;
 }
 
-.param.slider:after {
+.param.slider .param-handle {
     content: "";
     position: absolute;
     top: -0.5em;
@@ -249,6 +255,7 @@ body {
     align-items: center;
     width: 100%;
     height: 30%;
+    max-height: 20em;
     position: absolute;
     bottom: 0;
     user-select: none;
@@ -257,6 +264,8 @@ body {
 }
 
 .keyboard-keys {
+    display: flex;
+    flex-direction: row;
     height: 100%;
     width: 100%;
     position: relative;
@@ -274,7 +283,7 @@ body {
 
 .keyboard-keys .white {
     height: 100%;
-    width: 3em;
+    flex: 0 0 3em;
     z-index: 1;
     border-left: 1px solid #bbb;
     border-bottom: 1px solid #bbb;
@@ -293,7 +302,7 @@ body {
 
 .key.black {
     height: 65%;
-    width: 1.5em;
+    flex: 0 0 1.5em;
     margin: 0 0 0 -0.75em;
     z-index: 2;
     border: 1px solid #000;
