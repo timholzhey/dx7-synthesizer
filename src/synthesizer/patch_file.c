@@ -14,7 +14,12 @@
 #define PATCH_FILE_DIR					SOURCE_DIR "/res/patches"
 
 const char *rom_names[PATCH_FILE_ROM_COUNT] = {
-		"rom1a.syx",
+		[PATCH_FILE_ROM_ROM1A]		= "rom1a.syx",
+		[PATCH_FILE_ROM_ROM2A]		= "rom2a.syx",
+		[PATCH_FILE_ROM_ROM1B]		= "rom1b.syx",
+		[PATCH_FILE_ROM_VRC101A]	= "vrc101a.syx",
+		[PATCH_FILE_ROM_VRC104A]	= "vrc104a.syx",
+		[PATCH_FILE_ROM_VRC112A]	= "vrc112a.syx",
 };
 
 static struct {

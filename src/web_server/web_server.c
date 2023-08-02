@@ -54,7 +54,7 @@ HTTP_ROUTE_METHOD("/api/get_roms", get_roms, HTTP_METHOD_GET) {
 	json_object_free(&json_object);
 }
 
-HTTP_ROUTE_METHOD("api/select_roms", select_rom, HTTP_METHOD_POST) {
+HTTP_ROUTE_METHOD("api/select_rom", select_rom, HTTP_METHOD_POST) {
 	const char *body = request.body();
 
 	json_object_t json_object;

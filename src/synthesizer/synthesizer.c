@@ -53,61 +53,6 @@ ret_code_t synthesizer_init(void) {
 	// Load default sample
 	RET_ON_FAIL(patch_file_load_patch(DEFAULT_PATCH_FILE_VOICE - 1, &synth_data.voice_params));
 
-	// Test 1 operator
-	voice_params_t params = {
-			.algorithm = 4,
-			.name = "TEST      ",
-			.operators = {
-					[0] = {
-						.osc = {.frequency_coarse = 1, .detune = 7},
-						.output_level = 99,
-					},/*
-					[1] = {
-						.osc = {.frequency_coarse = 14},
-						.output_level = 58,
-					},
-					[2] = {
-						.osc = {.frequency_coarse = 1},
-						.output_level = 99,
-					},
-					[3] = {
-						.osc = {.frequency_coarse = 1},
-						.output_level = 88,
-					}*/
-			}
-	};
-	//memcpy(&synth_data.voice_params, &params, sizeof(voice_params_t));
-	// voice_assign_key(60, 127);
-
-//	for (uint32_t i = 0; i < 5; i++) {
-//		for (uint32_t j = 0; j < 5; j++) {
-//			for (uint32_t k = 0; k < 10; k++) {
-//				printf("32'd%u, ", get_sin_from_angle((i << LOG_FREQ_TO_PHASE_TABLE_SAMPLE_SHIFT) + (j << LOG_FREQ_TO_PHASE_TABLE_SAMPLE_SHIFT), k));
-//			}
-//			printf("\n");
-//		}
-//	}
-
-//	for (uint32_t i = 50; i < 55; i++) {
-//		for (uint32_t j = 0; j < 2; j++) {
-//			for (uint32_t k = 0; k < 5; k++) {
-//				for (uint32_t l = 0; l < 5; l++) {
-//					for (uint32_t m = 0; m < 5; m++) {
-//						uint32_t log_freq = get_oscillator_log_frequency(i, j, k, l, m);
-//						uint32_t phase_inc = get_phase_from_log_frequency(log_freq);
-//						printf("32'd%u, ", phase_inc);
-//					}
-//				}
-//				printf("\n");
-//			}
-//		}
-//	}
-
-//	uint32_t log_freq = get_oscillator_log_frequency(52, 0, 3, 4, 0);
-//	printf("Log freq %u\n", log_freq);
-//	uint32_t phase_inc = get_phase_from_log_frequency(log_freq);
-//	printf("Phase inc %u\n", phase_inc);
-
 	return RET_CODE_OK;
 }
 
@@ -119,18 +64,12 @@ ret_code_t synthesizer_init(void) {
  */
 static uint32_t get_phase_from_log_frequency(uint32_t log_freq) {
 	uint16_t index = (log_freq & SAMPLE_MASK) >> LOG_FREQ_TO_PHASE_TABLE_SAMPLE_SHIFT;
-//	printf("Index %u\n", index);
 	uint32_t phase_low = log_freq_to_phase_table[index];
-//	printf("Phase low %u\n", phase_low);
 	uint32_t phase_high = log_freq_to_phase_table[index + 1];
-//	printf("Phase high %u\n", phase_high);
 	uint32_t low_bits = log_freq & ((1 << LOG_FREQ_TO_PHASE_TABLE_SAMPLE_SHIFT) - 1);
-//	printf("Low bits %u\n", low_bits);
 	uint32_t high_bits = log_freq >> SAMPLE_BIT_WIDTH;
-//	printf("High bits %u\n", high_bits);
 	uint64_t slope = (int64_t) (phase_high - phase_low) * (int64_t) low_bits;
 	uint32_t phase = phase_low + (int32_t) (slope >> LOG_FREQ_TO_PHASE_TABLE_SAMPLE_SHIFT);
-//	printf("Phase %u\n", phase);
 	return LOG_FREQ_TO_PHASE_TABLE_BIT_WIDTH >= high_bits ? phase >> (LOG_FREQ_TO_PHASE_TABLE_BIT_WIDTH - high_bits) : 0;
 }
 
@@ -203,6 +142,15 @@ static int32_t get_sin_from_angle(uint32_t phase, uint16_t level) {
 	return is_signed ? -result << LOG_FREQ_TO_PHASE_TABLE_SAMPLE_SHIFT : result << LOG_FREQ_TO_PHASE_TABLE_SAMPLE_SHIFT;
 }
 
+/**
+ * @brief Advances the envelope state machine and returns the next level sample.
+ *
+ * @param gate 0 = off, 1 = on
+ * @param output_level 0..99 (quiet to loud)
+ * @param p_env_params
+ * @param p_env_data
+ * @return level 0..ENVELOPE_MAX (loud to quiet)
+ */
 static uint32_t envelope_get_sample(uint8_t gate, uint8_t output_level, envelope_params_t *p_env_params, envelope_data_t *p_env_data) {
 	if (p_env_data->state != ENVELOPE_STATE_OFF && gate == 0) {
 		p_env_data->state = ENVELOPE_STATE_RELEASE;
